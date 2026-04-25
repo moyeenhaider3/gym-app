@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hmssdk_flutter/hmssdk_flutter.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:shared/shared.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
@@ -22,6 +23,7 @@ class _VideoCallScreenState extends State<VideoCallScreen> implements HMSUpdateL
   bool _isMicMuted = false;
   bool _isVideoOff = false;
   bool _hasLeft = false;
+  bool _remotePeerLeft = false;
   String? _errorMsg;
 
   HMSVideoTrack? _localVideoTrack;
@@ -41,6 +43,34 @@ class _VideoCallScreenState extends State<VideoCallScreen> implements HMSUpdateL
     _myUserId = settings.get('userId', defaultValue: '') as String;
     _myRole = settings.get('userRole', defaultValue: 'member') as String;
     _callStartTime = DateTime.now();
+    _requestPermissionsAndJoin();
+  }
+
+  // ─── Bug 1 fix: Request permissions before SDK init ─────────────────────────
+
+  Future<void> _requestPermissionsAndJoin() async {
+    final cam = await Permission.camera.request();
+    final mic = await Permission.microphone.request();
+
+    if (!cam.isGranted || !mic.isGranted) {
+      if (mounted) {
+        setState(() {
+          _isJoining = false;
+          _errorMsg = 'Camera and microphone access is required to join the call.';
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Camera and microphone access is required.'),
+            action: SnackBarAction(
+              label: 'Open Settings',
+              onPressed: () => openAppSettings(),
+            ),
+          ),
+        );
+      }
+      return;
+    }
+
     _initHMS();
   }
 
@@ -84,17 +114,25 @@ class _VideoCallScreenState extends State<VideoCallScreen> implements HMSUpdateL
   @override
   void onRoomUpdate({required HMSRoom room, required HMSRoomUpdate update}) {}
 
+  // ─── Bug 2 fix: Peer leaving does NOT auto-leave or disable controls ────────
   @override
   void onPeerUpdate({required HMSPeer peer, required HMSPeerUpdate update}) {
     if (!mounted) return;
     if (!peer.isLocal) {
       if (update == HMSPeerUpdate.peerJoined) {
-        setState(() => _remotePeer = peer);
+        setState(() {
+          _remotePeer = peer;
+          _remotePeerLeft = false;
+        });
       } else if (update == HMSPeerUpdate.peerLeft) {
         setState(() {
-          _remotePeer = null;
+          _remotePeerLeft = true;
           _remoteVideoTrack = null;
         });
+        // Show snackbar but keep controls active
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('${peer.name} has left the call.')),
+        );
       }
     }
   }
@@ -160,6 +198,7 @@ class _VideoCallScreenState extends State<VideoCallScreen> implements HMSUpdateL
     _hmsSDK.switchCamera();
   }
 
+  // Bug 2 fix: Both roles can leave independently — no role check
   Future<void> _leaveCall({bool showSheet = true}) async {
     if (_hasLeft) return;
     _hasLeft = true;
@@ -186,6 +225,7 @@ class _VideoCallScreenState extends State<VideoCallScreen> implements HMSUpdateL
     }
   }
 
+  // ─── Bug 3 fix: isScrollControlled + keyboard inset padding ─────────────────
   void _showPostCallSheet(SessionLog log) {
     final isMember = _myRole == 'member';
     int rating = 5;
@@ -194,12 +234,18 @@ class _VideoCallScreenState extends State<VideoCallScreen> implements HMSUpdateL
     showModalBottomSheet(
       context: context,
       isDismissible: false,
+      isScrollControlled: true, // Bug 3 fix: allows sheet to resize for keyboard
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setSheetState) => Padding(
-          padding: const EdgeInsets.all(24),
+          padding: EdgeInsets.only(
+            left: 24,
+            right: 24,
+            top: 24,
+            bottom: MediaQuery.of(ctx).viewInsets.bottom + 24, // Bug 3 fix: shift up for keyboard
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -280,7 +326,10 @@ class _VideoCallScreenState extends State<VideoCallScreen> implements HMSUpdateL
             children: [
               const Icon(Icons.error_outline, size: 64, color: Colors.red),
               const SizedBox(height: 12),
-              Text(_errorMsg!, textAlign: TextAlign.center),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 32),
+                child: Text(_errorMsg!, textAlign: TextAlign.center),
+              ),
               const SizedBox(height: 16),
               FilledButton(onPressed: () => Navigator.pop(context), child: const Text('Go Back')),
             ],
@@ -309,12 +358,9 @@ class _VideoCallScreenState extends State<VideoCallScreen> implements HMSUpdateL
       body: SafeArea(
         child: Stack(
           children: [
-            // Remote video (full screen)
-            _remoteVideoTrack != null
-                ? SizedBox.expand(
-                    child: HMSVideoView(track: _remoteVideoTrack!),
-                  )
-                : Center(
+            // Remote video (full screen) — Bug 2 fix: shows "left" state if peer departed
+            _remotePeerLeft
+                ? Center(
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -328,12 +374,36 @@ class _VideoCallScreenState extends State<VideoCallScreen> implements HMSUpdateL
                         ),
                         const SizedBox(height: 12),
                         Text(
-                          _remotePeer?.name ?? 'Waiting for other participant...',
-                          style: const TextStyle(color: Colors.white70, fontSize: 16),
+                          '${_remotePeer?.name ?? "Participant"} has left',
+                          style: const TextStyle(color: Colors.white54, fontSize: 16),
                         ),
                       ],
                     ),
-                  ),
+                  )
+                : _remoteVideoTrack != null
+                    ? SizedBox.expand(
+                        child: HMSVideoView(track: _remoteVideoTrack!),
+                      )
+                    : Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            CircleAvatar(
+                              radius: 40,
+                              backgroundColor: Colors.grey.shade800,
+                              child: Text(
+                                _remotePeer?.name[0].toUpperCase() ?? '?',
+                                style: const TextStyle(fontSize: 32, color: Colors.white),
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              _remotePeer?.name ?? 'Waiting for other participant...',
+                              style: const TextStyle(color: Colors.white70, fontSize: 16),
+                            ),
+                          ],
+                        ),
+                      ),
 
             // Local video (PiP)
             Positioned(
@@ -358,7 +428,7 @@ class _VideoCallScreenState extends State<VideoCallScreen> implements HMSUpdateL
               ),
             ),
 
-            // Controls bar
+            // Controls bar — Bug 2 fix: always active regardless of peer state
             Positioned(
               bottom: 24,
               left: 0,
@@ -395,7 +465,7 @@ class _VideoCallScreenState extends State<VideoCallScreen> implements HMSUpdateL
             ),
 
             // Name label for remote peer
-            if (_remotePeer != null)
+            if (_remotePeer != null && !_remotePeerLeft)
               Positioned(
                 bottom: 100,
                 left: 16,

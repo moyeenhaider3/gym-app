@@ -61,18 +61,19 @@ class CallRequest extends Equatable {
   }
 
   Map<String, dynamic> toJson() => {
-    'id': id,
-    'memberId': memberId,
-    'trainerId': trainerId,
-    'requestedAt': requestedAt,
-    'scheduledFor': scheduledFor,
-    'note': note,
-    'status': status,
-    'declineReason': declineReason,
-    'roomMeta': roomMeta?.toJson(),
-  };
+        'id': id,
+        'memberId': memberId,
+        'trainerId': trainerId,
+        'requestedAt': requestedAt,
+        'scheduledFor': scheduledFor,
+        'note': note,
+        'status': status,
+        'declineReason': declineReason,
+        'roomMeta': roomMeta?.toJson(),
+      };
 
-  CallRequest copyWith({String? status, String? declineReason, RoomMeta? roomMeta}) {
+  CallRequest copyWith(
+      {String? status, String? declineReason, RoomMeta? roomMeta}) {
     return CallRequest(
       id: id,
       memberId: memberId,
@@ -97,11 +98,21 @@ class CallRequest extends Equatable {
     final now = DateTime.now().toUtc();
     final scheduled = scheduledDateTime.toUtc();
     final diff = scheduled.difference(now).inMinutes;
-    return diff <= 10 && diff >= -60;
+    return diff <= 20 && diff >= -60;
   }
 
   @override
-  List<Object?> get props => [id, memberId, trainerId, requestedAt, scheduledFor, note, status, declineReason, roomMeta];
+  List<Object?> get props => [
+        id,
+        memberId,
+        trainerId,
+        requestedAt,
+        scheduledFor,
+        note,
+        status,
+        declineReason,
+        roomMeta
+      ];
 }
 
 @HiveType(typeId: 4)
@@ -140,13 +151,14 @@ class RoomMeta extends Equatable {
   }
 
   Map<String, dynamic> toJson() => {
-    'id': id,
-    'callRequestId': callRequestId,
-    'hmsRoomId': hmsRoomId,
-    'hmsRoleMember': hmsRoleMember,
-    'hmsRoleTrainer': hmsRoleTrainer,
-  };
+        'id': id,
+        'callRequestId': callRequestId,
+        'hmsRoomId': hmsRoomId,
+        'hmsRoleMember': hmsRoleMember,
+        'hmsRoleTrainer': hmsRoleTrainer,
+      };
 
   @override
-  List<Object?> get props => [id, callRequestId, hmsRoomId, hmsRoleMember, hmsRoleTrainer];
+  List<Object?> get props =>
+      [id, callRequestId, hmsRoomId, hmsRoleMember, hmsRoleTrainer];
 }
