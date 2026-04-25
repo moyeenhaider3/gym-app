@@ -98,7 +98,7 @@ class CallRequest extends Equatable {
     final now = DateTime.now().toUtc();
     final scheduled = scheduledDateTime.toUtc();
     final diff = scheduled.difference(now).inMinutes;
-    return diff <= 20 && diff >= -60;
+    return diff <= 10 && diff >= -60;
   }
 
   @override
