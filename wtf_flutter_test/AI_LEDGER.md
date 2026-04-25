@@ -12,7 +12,8 @@
 | 8 | Claude | Generate animated typing indicator widget for ConversationScreen | Custom `_TypingDots` widget using staggered `AnimationController`s | `bbd5d56` |
 | 9 | Claude | Resolve `CantAccessCaptureDevice (code=3001)` from 100ms SDK | Add `permission_handler` checks for Camera/Microphone before calling `hmsSDK.build()` | `a006e92` |
 | 10 | Claude | Fix software keyboard overlapping BottomSheet post-call | Enable `isScrollControlled: true` and apply `MediaQuery.of(context).viewInsets.bottom` padding to modal content | `a006e92` |
-| 11 | Claude | Enforce 10-minute pre-join window | Revert joinable interval to exactly 10 minutes to meet specification | Pending |
+| 11 | Claude | Enforce 10-minute pre-join window | Revert joinable interval to exactly 10 minutes to meet specification | `edd1259` |
+| 12 | Claude | Update App Launcher Logos | Replace default Flutter icons with custom App Logo across all density buckets | Pending |
 
 ## Debugging with AI
 
