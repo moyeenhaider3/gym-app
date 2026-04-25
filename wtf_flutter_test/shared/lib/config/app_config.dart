@@ -5,9 +5,6 @@ class AppConfig {
   /// Both Android devices must be on the same WiFi as this machine.
   static const String serverUrl = 'http://192.168.0.122:3000';
 
-  /// 100ms pre-created room ID.
-  static const String hmsRoomId = '69eb0eb2d63b6068ded6f1f3';
-
   /// 100ms role names (must match dashboard config).
   static const String hmsRoleTrainer = 'host';
   static const String hmsRoleMember = 'guest';
