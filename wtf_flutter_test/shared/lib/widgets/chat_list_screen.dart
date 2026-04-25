@@ -152,7 +152,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
   }
 
   String _relativeTime(DateTime dt) {
-    final diff = DateTime.now().difference(dt);
+    final diff = DateTime.now().difference(dt.toLocal());
     if (diff.inMinutes < 1) return 'now';
     if (diff.inMinutes < 60) return '${diff.inMinutes}m';
     if (diff.inHours < 24) return '${diff.inHours}h';

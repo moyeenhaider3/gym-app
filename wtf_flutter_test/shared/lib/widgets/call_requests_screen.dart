@@ -81,8 +81,8 @@ class _CallRequestsScreenState extends State<CallRequestsScreen> {
 
   Widget _buildRequestCard(CallRequest cr) {
     final theme = Theme.of(context);
-    final schedDate = DateFormat('MMM d, yyyy').format(cr.scheduledDateTime);
-    final schedTime = DateFormat('h:mm a').format(cr.scheduledDateTime);
+    final schedDate = DateFormat('MMM d, yyyy').format(cr.scheduledDateTime.toLocal());
+    final schedTime = DateFormat('h:mm a').format(cr.scheduledDateTime.toLocal());
     final statusColor = cr.isPending
         ? Colors.orange
         : cr.isApproved

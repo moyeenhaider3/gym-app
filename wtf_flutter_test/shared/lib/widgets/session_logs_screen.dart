@@ -46,9 +46,13 @@ class _SessionLogsScreenState extends State<SessionLogsScreen> {
     final now = DateTime.now();
     switch (_filter) {
       case '7days':
-        return _logs.where((l) => now.difference(l.startDateTime).inDays <= 7).toList();
+        return _logs.where((l) => now.difference(l.startDateTime.toLocal()).inDays <= 7).toList();
       case 'month':
-        return _logs.where((l) => l.startDateTime.month == now.month && l.startDateTime.year == now.year).toList();
+        final localStart = DateTime.now();
+        return _logs.where((l) {
+          final lt = l.startDateTime.toLocal();
+          return lt.month == localStart.month && lt.year == localStart.year;
+        }).toList();
       default:
         return _logs;
     }
@@ -119,8 +123,8 @@ class _SessionLogsScreenState extends State<SessionLogsScreen> {
   }
 
   Widget _buildLogCard(SessionLog log, ThemeData theme) {
-    final date = DateFormat('MMM d, yyyy').format(log.startDateTime);
-    final time = DateFormat('h:mm a').format(log.startDateTime);
+    final date = DateFormat('MMM d, yyyy').format(log.startDateTime.toLocal());
+    final time = DateFormat('h:mm a').format(log.startDateTime.toLocal());
 
     return Card(
       elevation: 0,
@@ -172,7 +176,7 @@ class _SessionLogsScreenState extends State<SessionLogsScreen> {
   }
 
   void _showDetail(SessionLog log) {
-    final date = DateFormat('MMM d, yyyy h:mm a').format(log.startDateTime);
+    final date = DateFormat('MMM d, yyyy h:mm a').format(log.startDateTime.toLocal());
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(

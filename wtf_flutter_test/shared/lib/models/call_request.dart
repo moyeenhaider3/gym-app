@@ -94,9 +94,10 @@ class CallRequest extends Equatable {
   /// Call joinable if approved and within 10 minutes of scheduled time.
   bool get isJoinable {
     if (!isApproved || roomMeta == null) return false;
-    final now = DateTime.now();
-    final diff = scheduledDateTime.difference(now).inMinutes;
-    return diff <= 10;
+    final now = DateTime.now().toUtc();
+    final scheduled = scheduledDateTime.toUtc();
+    final diff = scheduled.difference(now).inMinutes;
+    return diff <= 10 && diff >= -60;
   }
 
   @override
